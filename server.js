@@ -20,7 +20,22 @@ mongoose
 
 // Start Server
 const port = process.env.PORT;
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`We are waiting for the summer... At http://localhost:${port}`);
 });
 
+process.on("unhandledRejection", (error) => {
+  console.log(error.name, error.message);
+  console.log("Unhandled rejection! Shutting down...");
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+process.on("uncaughtException", (error) => {
+  console.log(error.name, error.message);
+  console.log("Uncaught exception! Shutting down...");
+  server.close(() => {
+    process.exit(1);
+  });
+});
