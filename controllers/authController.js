@@ -12,6 +12,16 @@ const signToken = (id) => {
   }));
 };
 
+const createAndSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+
+  res.status(statusCode).json({
+    status: "Success",
+    token,
+    user,
+  });
+};
+
 exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
@@ -20,14 +30,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     passwordConfirm: req.body.passwordConfirm,
     role: req.body.role,
   });
-
-  const token = signToken(newUser._id);
-
-  res.status(201).json({
-    status: "Success",
-    token,
-    data: newUser,
-  });
+  createAndSendToken(newUser, 201, res);
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -41,13 +44,7 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!user || !(await user.correctPassword(password, user.password))) {
     return next(new AppError("Invalid credentials!", 401));
   }
-
-  const token = signToken(user._id);
-
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  createAndSendToken(user, 200, res);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -157,23 +154,14 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
   await user.save();
 
-  const token = signToken(user._id);
-
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  createAndSendToken(user, 200, res);
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id).select("+password");
 
-  if (!user) {
-    return next(new AppError("You are not logged in", 404));
-  }
-
-  if (!user.correctPassword(req.body.password, user.password)) {
-    return next(new AppError("Invalid password!", 401));
+  if (!(await user.correctPassword(req.body.password, user.password))) {
+    return next(new AppError("Invalid credentials", 401));
   }
 
   user.password = req.body.newPassword;
@@ -181,10 +169,5 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 
   await user.save();
 
-  const token = signToken(user._id);
-
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  createAndSendToken(user, 200, res);
 });
